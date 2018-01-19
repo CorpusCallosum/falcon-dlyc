@@ -13,7 +13,7 @@
 
 /************ Radio Setup ***************/
 
-// Change to 434.0 or other frequency, must match RX's freq!
+// Change to 434.0 or other frequency, mumst match RX's freq!
 #define RF69_FREQ 915.0
 
 #if defined (__AVR_ATmega32U4__) // Feather 32u4 w/Radio
@@ -51,26 +51,28 @@
   #define LED           13
 #endif
 
-/* Teensy 3.x w/wing
-#define RFM69_RST     9   // "A"
-#define RFM69_CS      10   // "B"
-#define RFM69_IRQ     4    // "C"
-#define RFM69_IRQN    digitalPinToInterrupt(RFM69_IRQ )
-*/
- 
-/* WICED Feather w/wing 
-#define RFM69_RST     PA4     // "A"
-#define RFM69_CS      PB4     // "B"
-#define RFM69_IRQ     PA15    // "C"
-#define RFM69_IRQN    RFM69_IRQ
-*/
-
 // Singleton instance of the radio driver
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 int16_t packetnum = 0;  // packet counter, we increment per xmission
 
-int leds[6] = {5,6,9,10,11,12};
+//LED stuff
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
+
+// Which pin on the Arduino is connected to the NeoPixels?
+// On a Trinket or Gemma we suggest changing this to 1
+#define ledPIN            6
+
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS      54
+
+// When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
+// Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
+// example for more information on possible values.
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, ledPIN, NEO_GRB + NEO_KHZ800);
 
 void setup() 
 {
@@ -81,7 +83,7 @@ void setup()
   pinMode(RFM69_RST, OUTPUT);
   digitalWrite(RFM69_RST, LOW);
 
-  Serial.println("Feather RFM69 TX Test!");
+  Serial.println("Feather RFM69 RX Test!");
   Serial.println();
 
   // manual reset
@@ -95,6 +97,7 @@ void setup()
     while (1);
   }
   Serial.println("RFM69 radio init OK!");
+  
   // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
   // No encryption
   if (!rf69.setFrequency(RF69_FREQ)) {
@@ -114,60 +117,86 @@ void setup()
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
-  //data LED input
-  pinMode(5, INPUT);
-  pinMode(6, INPUT);
-  pinMode(9, INPUT);
-  pinMode(10, INPUT);
-  pinMode(11, INPUT);
-  pinMode(12, INPUT);
+  pixels.begin(); // This initializes the NeoPixel library.
 }
 
 
-
 void loop() {
-  delay(10);  // Wait 1 second between transmits, could also 'sleep' here!
-  
-  char radiopacket[6] = "000000";
-  
-  //get LED state...
-   for(int i=0; i<6; i++){
-    int buttonState = digitalRead(leds[i]);
-    //Serial.println(radiopacket);
-    
-      if(buttonState){
-        //led is OFF
-         radiopacket[i] = '0';
-      }
-      else{
-        //led is on
-         radiopacket[i] = '1';
-      }
-   }
-
-  //itoa(packetnum++, radiopacket+13, 10);
-  Serial.print("Sending "); Serial.println(radiopacket);
-  
-  // Send a message!
-  rf69.send((uint8_t *)radiopacket, strlen(radiopacket));
- // rf69.waitPacketSent();
-
-  // Now wait for a reply
- /* uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
-
-  if (rf69.waitAvailableTimeout(500))  { 
-    // Should be a reply message for us now   
+ if (rf69.available()) {
+    // Should be a message for us now   
+   // uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
+    uint8_t buf[6];
+    uint8_t len = sizeof(buf);
     if (rf69.recv(buf, &len)) {
-      Serial.print("Got a reply: ");
+      if (!len) return;
+      buf[len] = 0;
+      Serial.print("Received [");
+      Serial.print(len);
+      Serial.print("]: ");
       Serial.println((char*)buf);
-      Blink(LED, 50, 3); //blink LED 3 times, 50ms between blinks
+     // Serial.print("RSSI: ");
+     // Serial.println(rf69.lastRssi(), DEC);
+
+      //handle message
+      for(int i=0; i<6; i++){
+        bool isOn = true;
+        
+        if (buf[i] == '0') 
+          isOn = false;
+
+        lightLED(i, isOn);
+      }
+
+      pixels.show(); // This sends the updated pixel color to the hardware.
+      
+/*if (strstr((char *)buf, "Hello World")) {
+        // Send a reply!
+        uint8_t data[] = "And hello back to you";
+        rf69.send(data, sizeof(data));
+        rf69.waitPacketSent();
+        Serial.println("Sent a reply");
+        Blink(LED, 40, 3); //blink LED 3 times, 40ms between blinks
+      }
+      */
     } else {
       Serial.println("Receive failed");
     }
-  } else {
-    Serial.println("No reply, is another RFM69 listening?");
-  }*/
+  }
+}
+
+void lightLED(int i, bool isOn){
+  //Serial.print(isOn);
+  Serial.print("LED #");
+  Serial.print(i);
+  
+  if(isOn){
+    Serial.println(" is ON");
+    if(i<2){
+      //GREEN
+      pixels.setPixelColor(i, pixels.Color(0,255,0));
+    }
+    else if(i<4){
+      //ORANGE
+      pixels.setPixelColor(i, pixels.Color(255,255,0));
+    }
+    else{
+      //RED
+      pixels.setPixelColor(i, pixels.Color(255,0,0));
+    }
+  }
+  else
+  {
+    Serial.println(" is OFF");
+    pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
+  }
+    
+}
+
+void lightLEDRange(int first, int last, String color){
+  for(int i=first; i<= last; i++){
+    pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
+  }
+  
 }
 
 void Blink(byte PIN, byte DELAY_MS, byte loops) {
