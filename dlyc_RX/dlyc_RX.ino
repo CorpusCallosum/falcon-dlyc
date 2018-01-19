@@ -164,6 +164,12 @@ void loop() {
   }
 }
 
+//define colors
+int red[] = {255, 0, 0};
+int orange[] = {255, 100, 0};
+int green[] = {0, 255, 0};
+int off[] = {0, 0, 0};
+
 void lightLED(int i, bool isOn){
   //Serial.print(isOn);
   Serial.print("LED #");
@@ -173,28 +179,37 @@ void lightLED(int i, bool isOn){
     Serial.println(" is ON");
     if(i<2){
       //GREEN
-      pixels.setPixelColor(i, pixels.Color(0,255,0));
+      lightLEDRange(i, green);
+    //  pixels.setPixelColor(i, pixels.Color(0,255,0));
+      
     }
     else if(i<4){
       //ORANGE
-      pixels.setPixelColor(i, pixels.Color(255,255,0));
+      lightLEDRange(i, orange);
+      //pixels.setPixelColor(i, pixels.Color(255,255,0));
     }
     else{
       //RED
-      pixels.setPixelColor(i, pixels.Color(255,0,0));
+      lightLEDRange(i, red);
+      //pixels.setPixelColor(i, pixels.Color(255,0,0));
     }
   }
   else
   {
     Serial.println(" is OFF");
-    pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
+    lightLEDRange(i, off);
+   // pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
   }
     
 }
 
-void lightLEDRange(int first, int last, String color){
-  for(int i=first; i<= last; i++){
-    pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
+
+
+void lightLEDRange(int i, int c[]){
+  int startIndex = i * 9;
+  int endIndex = ((i+1) * 9) - 1;
+  for(int l=startIndex; l<= endIndex; l++){
+    pixels.setPixelColor(l, pixels.Color(c[0],c[1],c[2])); // Moderately bright green color.
   }
   
 }
