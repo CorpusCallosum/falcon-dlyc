@@ -10,19 +10,24 @@
 
 #include <SPI.h>
 #include <RH_RF69.h>
+#include <SD.h>
+#include <Adafruit_VS1053.h>
 
 /************ Radio Setup ***************/
 
 // Change to 434.0 or other frequency, mumst match RX's freq!
 #define RF69_FREQ 915.0
 
-#if defined (__AVR_ATmega32U4__) // Feather 32u4 w/Radio
+//#if defined (__AVR_ATmega32U4__) // Feather 32u4 w/Radio
   #define RFM69_CS      8
   #define RFM69_INT     7
   #define RFM69_RST     4
   #define LED           13
-#endif
 
+  
+//#endif
+
+/*
 #if defined(ARDUINO_SAMD_FEATHER_M0) // Feather M0 w/Radio
   #define RFM69_CS      8
   #define RFM69_INT     3
@@ -49,7 +54,7 @@
   #define RFM69_CS      33   // "B"
   #define RFM69_INT     27   // "A"
   #define LED           13
-#endif
+#endif*/
 
 // Singleton instance of the radio driver
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
@@ -73,6 +78,18 @@ int16_t packetnum = 0;  // packet counter, we increment per xmission
 // Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
 // example for more information on possible values.
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, ledPIN, NEO_GRB + NEO_KHZ800);
+
+//SOUND stuff
+// These are the pins used
+#define VS1053_RESET   -1     // VS1053 reset pin (not used!)
+#define VS1053_CS       6     // VS1053 chip select pin (output)
+  #define VS1053_DCS     10     // VS1053 Data/command select pin (output)
+  #define CARDCS          5     // Card chip select pin
+  // DREQ should be an Int pin *if possible* (not possible on 32u4)
+  #define VS1053_DREQ     9     // VS1053 Data request, ideally an Interrupt pin
+
+  Adafruit_VS1053_FilePlayer musicPlayer = 
+  Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, VS1053_DREQ, CARDCS);
 
 void setup() 
 {
@@ -118,6 +135,7 @@ void setup()
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
   pixels.begin(); // This initializes the NeoPixel library.
+  initSound();
 }
 
 
@@ -211,9 +229,50 @@ void lightLEDRange(int i, int c[]){
   for(int l=startIndex; l<= endIndex; l++){
     pixels.setPixelColor(l, pixels.Color(c[0],c[1],c[2])); // Moderately bright green color.
   }
-  
 }
 
+//*************
+//INITIALIZATION
+//INIT SOUND
+void initSound(){
+  Serial.println("\n\nAdafruit VS1053 Feather Test");
+  
+  if (! musicPlayer.begin()) { // initialise the music player
+     Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
+     while (1);
+  }
+
+  Serial.println(F("VS1053 found"));
+ 
+  musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
+  
+  if (!SD.begin(CARDCS)) {
+    Serial.println(F("SD failed, or not present"));
+    while (1);  // don't do anything more
+  }
+  Serial.println("SD OK!");
+  
+  // Set volume for left, right channels. lower numbers == louder volume!
+  musicPlayer.setVolume(10,10);
+  
+#if defined(__AVR_ATmega32U4__) 
+  // Timer interrupts are not suggested, better to use DREQ interrupt!
+  // but we don't have them on the 32u4 feather...
+  musicPlayer.useInterrupt(VS1053_FILEPLAYER_TIMER0_INT); // timer int
+#elif defined(ESP32)
+  // no IRQ! doesn't work yet :/
+#else
+  // If DREQ is on an interrupt pin we can do background
+  // audio playing
+  musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
+#endif
+  
+  // Play a file in the background, REQUIRES interrupts!
+  Serial.println(F("Playing full track 001"));
+  musicPlayer.playFullFile("EndOfRound_Success_B.wav");
+}
+
+/*
 void Blink(byte PIN, byte DELAY_MS, byte loops) {
   for (byte i=0; i<loops; i++)  {
     digitalWrite(PIN,HIGH);
@@ -221,4 +280,4 @@ void Blink(byte PIN, byte DELAY_MS, byte loops) {
     digitalWrite(PIN,LOW);
     delay(DELAY_MS);
   }
-}
+}*/
