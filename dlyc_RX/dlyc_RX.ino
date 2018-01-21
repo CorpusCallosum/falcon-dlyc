@@ -69,8 +69,7 @@ int16_t packetnum = 0;  // packet counter, we increment per xmission
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1
-#define ledPIN            6
-
+#define ledPIN            11
 // How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS      54
 
@@ -135,7 +134,17 @@ void setup()
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
   pixels.begin(); // This initializes the NeoPixel library.
+ 
+ //light all LEDS on start
+  for(int i=0; i<6; i++){
+      lightLED(i, true);
+      delay(10);
+      pixels.show();
+  }
+  
   initSound();
+
+ 
 }
 
 
@@ -166,16 +175,7 @@ void loop() {
       }
 
       pixels.show(); // This sends the updated pixel color to the hardware.
-      
-/*if (strstr((char *)buf, "Hello World")) {
-        // Send a reply!
-        uint8_t data[] = "And hello back to you";
-        rf69.send(data, sizeof(data));
-        rf69.waitPacketSent();
-        Serial.println("Sent a reply");
-        Blink(LED, 40, 3); //blink LED 3 times, 40ms between blinks
-      }
-      */
+
     } else {
       Serial.println("Receive failed");
     }
@@ -221,8 +221,6 @@ void lightLED(int i, bool isOn){
     
 }
 
-
-
 void lightLEDRange(int i, int c[]){
   int startIndex = i * 9;
   int endIndex = ((i+1) * 9) - 1;
@@ -235,6 +233,12 @@ void lightLEDRange(int i, int c[]){
 //INITIALIZATION
 //INIT SOUND
 void initSound(){
+  //disable radio as test...
+  //pinMode(8, INPUT_PULLUP);
+  
+  // Wait for serial port to be opened, remove this line for 'standalone' operation
+  //while (!Serial) { delay(1); }
+  
   Serial.println("\n\nAdafruit VS1053 Feather Test");
   
   if (! musicPlayer.begin()) { // initialise the music player
@@ -250,7 +254,6 @@ void initSound(){
     Serial.println(F("SD failed, or not present"));
     while (1);  // don't do anything more
   }
-  Serial.println("SD OK!");
   
   // Set volume for left, right channels. lower numbers == louder volume!
   musicPlayer.setVolume(10,10);
@@ -259,8 +262,6 @@ void initSound(){
   // Timer interrupts are not suggested, better to use DREQ interrupt!
   // but we don't have them on the 32u4 feather...
   musicPlayer.useInterrupt(VS1053_FILEPLAYER_TIMER0_INT); // timer int
-#elif defined(ESP32)
-  // no IRQ! doesn't work yet :/
 #else
   // If DREQ is on an interrupt pin we can do background
   // audio playing
@@ -268,16 +269,10 @@ void initSound(){
 #endif
   
   // Play a file in the background, REQUIRES interrupts!
-  Serial.println(F("Playing full track 001"));
-  musicPlayer.playFullFile("EndOfRound_Success_B.wav");
+  Serial.println(F("Playing startup sound"));
+  musicPlayer.playFullFile("poweron.wav");
+  musicPlayer.playFullFile("searchp.wav");
+  musicPlayer.playFullFile("searchp.wav");
+  musicPlayer.playFullFile("searchp.wav");
 }
 
-/*
-void Blink(byte PIN, byte DELAY_MS, byte loops) {
-  for (byte i=0; i<loops; i++)  {
-    digitalWrite(PIN,HIGH);
-    delay(DELAY_MS);
-    digitalWrite(PIN,LOW);
-    delay(DELAY_MS);
-  }
-}*/
