@@ -24,38 +24,6 @@
   #define RFM69_RST     4
   #define LED           13
 
-  
-//#endif
-
-/*
-#if defined(ARDUINO_SAMD_FEATHER_M0) // Feather M0 w/Radio
-  #define RFM69_CS      8
-  #define RFM69_INT     3
-  #define RFM69_RST     4
-  #define LED           13
-#endif
-
-#if defined (__AVR_ATmega328P__)  // Feather 328P w/wing
-  #define RFM69_INT     3  // 
-  #define RFM69_CS      4  //
-  #define RFM69_RST     2  // "A"
-  #define LED           13
-#endif
-
-#if defined(ESP8266)    // ESP8266 feather w/wing
-  #define RFM69_CS      2    // "E"
-  #define RFM69_IRQ     15   // "B"
-  #define RFM69_RST     16   // "D"
-  #define LED           0
-#endif
-
-#if defined(ESP32)    // ESP32 feather w/wing
-  #define RFM69_RST     13   // same as LED
-  #define RFM69_CS      33   // "B"
-  #define RFM69_INT     27   // "A"
-  #define LED           13
-#endif*/
-
 // Singleton instance of the radio driver
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
@@ -134,16 +102,22 @@ void setup()
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
   pixels.begin(); // This initializes the NeoPixel library.
+
+  //turn off LEDS on start
+  for(int i=0; i<6; i++){
+      lightLED(i, false);
+  }
+  pixels.show();
+
+  //init sound
+  initSound();
  
- //light all LEDS on start
+  //light all LEDS on start
   for(int i=0; i<6; i++){
       lightLED(i, true);
-      delay(10);
+      delay(100);
       pixels.show();
   }
-  
-  initSound();
-
  
 }
 
@@ -237,6 +211,7 @@ void initSound(){
   //pinMode(8, INPUT_PULLUP);
   
   // Wait for serial port to be opened, remove this line for 'standalone' operation
+  //Need to uncomment this, to get serial communication working...
   //while (!Serial) { delay(1); }
   
   Serial.println("\n\nAdafruit VS1053 Feather Test");
@@ -270,9 +245,6 @@ void initSound(){
   
   // Play a file in the background, REQUIRES interrupts!
   Serial.println(F("Playing startup sound"));
-  musicPlayer.playFullFile("poweron.wav");
-  musicPlayer.playFullFile("searchp.wav");
-  musicPlayer.playFullFile("searchp.wav");
-  musicPlayer.playFullFile("searchp.wav");
+  musicPlayer.startPlayingFile("poweron.mp3");
 }
 
