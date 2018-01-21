@@ -44,7 +44,13 @@ int16_t packetnum = 0;  // packet counter, we increment per xmission
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
 // Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
 // example for more information on possible values.
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, ledPIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, ledPIN, NEO_GRB + NEO_KHZ800);
+
+//define colors
+uint32_t red = strip.Color(255, 0, 0);
+uint32_t orange = strip.Color(255, 100, 0);
+uint32_t green = strip.Color(0, 255, 0);
+uint32_t black = strip.Color(0, 0, 0);
 
 //SOUND stuff
 // These are the pins used
@@ -101,13 +107,9 @@ void setup()
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
-  pixels.begin(); // This initializes the NeoPixel library.
-
+  strip.begin(); // This initializes the NeoPixel library.
   //turn off LEDS on start
-  for(int i=0; i<6; i++){
-      lightLED(i, false);
-  }
-  pixels.show();
+  clearLEDs();
 
   //init sound
   initSound();
@@ -115,8 +117,8 @@ void setup()
   //light all LEDS on start
   for(int i=0; i<6; i++){
       lightLED(i, true);
-      delay(100);
-      pixels.show();
+      delay(200);
+      strip.show();
   }
  
 }
@@ -125,7 +127,6 @@ void setup()
 void loop() {
  if (rf69.available()) {
     // Should be a message for us now   
-   // uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
     uint8_t buf[6];
     uint8_t len = sizeof(buf);
     if (rf69.recv(buf, &len)) {
@@ -135,8 +136,6 @@ void loop() {
       Serial.print(len);
       Serial.print("]: ");
       Serial.println((char*)buf);
-     // Serial.print("RSSI: ");
-     // Serial.println(rf69.lastRssi(), DEC);
 
       //handle message
       for(int i=0; i<6; i++){
@@ -148,19 +147,18 @@ void loop() {
         lightLED(i, isOn);
       }
 
-      pixels.show(); // This sends the updated pixel color to the hardware.
+      strip.show(); // This sends the updated pixel color to the hardware.
 
     } else {
       Serial.println("Receive failed");
     }
   }
+  else{
+    //no message, play default animation...
+    
+  }
+  
 }
-
-//define colors
-int red[] = {255, 0, 0};
-int orange[] = {255, 100, 0};
-int green[] = {0, 255, 0};
-int off[] = {0, 0, 0};
 
 void lightLED(int i, bool isOn){
   //Serial.print(isOn);
@@ -188,19 +186,22 @@ void lightLED(int i, bool isOn){
   }
   else
   {
-    Serial.println(" is OFF");
-    lightLEDRange(i, off);
-   // pixels.setPixelColor(i, pixels.Color(0,0,0)); // Moderately bright green color.
+    lightLEDRange(i, black);
   }
     
 }
 
-void lightLEDRange(int i, int c[]){
+void lightLEDRange(int i, uint32_t c){
   int startIndex = i * 9;
   int endIndex = ((i+1) * 9) - 1;
   for(int l=startIndex; l<= endIndex; l++){
-    pixels.setPixelColor(l, pixels.Color(c[0],c[1],c[2])); // Moderately bright green color.
+    strip.setPixelColor(l, c); // Moderately bright green color.
   }
+}
+
+void clearLEDs(){
+  strip.clear();
+  strip.show();
 }
 
 //*************
