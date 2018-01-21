@@ -115,11 +115,11 @@ void setup()
   initSound();
  
   //light all LEDS on start
-  for(int i=0; i<6; i++){
+  /*for(int i=0; i<6; i++){
       lightLED(i, true);
       delay(200);
       strip.show();
-  }
+  }*/
  
 }
 
@@ -155,7 +155,7 @@ void loop() {
   }
   else{
     //no message, play default animation...
-    
+    updateDefaultAnimation();
   }
   
 }
@@ -169,34 +169,62 @@ void lightLED(int i, bool isOn){
     Serial.println(" is ON");
     if(i<2){
       //GREEN
-      lightLEDRange(i, green);
-    //  pixels.setPixelColor(i, pixels.Color(0,255,0));
-      
+      lightLEDGroup(i, green);
     }
     else if(i<4){
       //ORANGE
-      lightLEDRange(i, orange);
-      //pixels.setPixelColor(i, pixels.Color(255,255,0));
+      lightLEDGroup(i, orange);
     }
     else{
       //RED
-      lightLEDRange(i, red);
-      //pixels.setPixelColor(i, pixels.Color(255,0,0));
+      lightLEDGroup(i, red);
     }
   }
   else
   {
-    lightLEDRange(i, black);
+    lightLEDGroup(i, black);
   }
     
 }
 
-void lightLEDRange(int i, uint32_t c){
+void lightLEDGroup(int i, uint32_t c){
   int startIndex = i * 9;
   int endIndex = ((i+1) * 9) - 1;
   for(int l=startIndex; l<= endIndex; l++){
     strip.setPixelColor(l, c); // Moderately bright green color.
   }
+}
+
+int defaultLEDIndex = 0;
+int defaultLEDCounter = 1;
+void updateDefaultAnimation(){
+  if(defaultLEDIndex >= NUMPIXELS){
+    defaultLEDCounter = -1;
+  }else if(defaultLEDIndex<0){
+    defaultLEDCounter = 1;
+  }
+  defaultLEDIndex += defaultLEDCounter;
+  
+  lightLEDRange(0,defaultLEDIndex);
+  delay(defaultLEDIndex+10);
+}
+
+void lightLEDRange(int first, int last){
+  int cg = NUMPIXELS/3;
+  strip.clear();
+  for(int i=first;i<last; i++){
+    if(i<cg){
+      //green
+      strip.setPixelColor(i, green); // Moderately bright green color.
+    }
+    else if(i<cg*2){
+      strip.setPixelColor(i, orange);
+    }
+    else if(i<cg*3){
+      strip.setPixelColor(i, red);
+    }
+  }
+  strip.show();
 }
 
 void clearLEDs(){
