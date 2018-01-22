@@ -12,6 +12,9 @@
 #include <RH_RF69.h>
 #include <SD.h>
 #include <Adafruit_VS1053.h>
+#include "Timer.h"
+
+Timer t;
 
 /************ Radio Setup ***************/
 
@@ -113,17 +116,13 @@ void setup()
 
   //init sound
   initSound();
- 
-  //light all LEDS on start
-  /*for(int i=0; i<6; i++){
-      lightLED(i, true);
-      delay(200);
-      strip.show();
-  }*/
- 
 }
 
 
+bool playDefaultAnimation = true; //play default animation on start...
+int defaultAnimationTime = 10000; // 1 minute
+int timerEvent;
+bool timerRunning = false;
 void loop() {
  if (rf69.available()) {
     // Should be a message for us now   
@@ -152,12 +151,36 @@ void loop() {
     } else {
       Serial.println("Receive failed");
     }
+    playDefaultAnimation = false;
+    timerRunning = false;
+    t.stop(timerEvent);
   }
   else{
-    //no message, play default animation...
-    updateDefaultAnimation();
+    //no message
+    //Serial.println("no messages");
+    if(!playDefaultAnimation){
+     // Serial.println("default animation not running");
+      //start timer
+      if(!timerRunning){
+       // Serial.println("timer not running - start timer");
+        t.stop(timerEvent);
+        timerEvent = t.after(defaultAnimationTime, onTimerDone); //after 1 minute, start default animation
+        timerRunning = true;
+      }
+    }else{
+      updateDefaultAnimation();
+    }
   }
-  
+  //update timer class
+  t.update();
+}
+
+void onTimerDone(){
+  Serial.println("timer done - start default animation");
+  playDefaultAnimation = true;
+  int defaultLEDIndex = 0;
+  int defaultLEDCounter = 1;
+  timerRunning = false;
 }
 
 void lightLED(int i, bool isOn){
@@ -195,13 +218,15 @@ void lightLEDGroup(int i, uint32_t c){
   }
 }
 
+//DEFAULT ANIAMTION CODE
 int defaultLEDIndex = 0;
 int defaultLEDCounter = 1;
 void updateDefaultAnimation(){
   if(defaultLEDIndex >= NUMPIXELS){
     defaultLEDCounter = -1;
-  }else if(defaultLEDIndex<0){
+  }else if(defaultLEDIndex<=0){
     defaultLEDCounter = 1;
+    musicPlayer.startPlayingFile("searchp.mp3");
   }
   defaultLEDIndex += defaultLEDCounter;
   
@@ -241,7 +266,7 @@ void initSound(){
   
   // Wait for serial port to be opened, remove this line for 'standalone' operation
   //Need to uncomment this, to get serial communication working...
-  //while (!Serial) { delay(1); }
+  while (!Serial) { delay(1); }
   
   Serial.println("\n\nAdafruit VS1053 Feather Test");
   
@@ -274,6 +299,7 @@ void initSound(){
   
   // Play a file in the background, REQUIRES interrupts!
   Serial.println(F("Playing startup sound"));
-  musicPlayer.startPlayingFile("poweron.mp3");
+  musicPlayer.playFullFile("poweron.mp3");
+  //delay(1000);
 }
 
