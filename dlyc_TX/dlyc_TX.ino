@@ -11,6 +11,9 @@
 #include <SPI.h>
 #include <RH_RF69.h>
 
+#include "Timer.h"
+Timer t;
+
 /************ Radio Setup ***************/
 
 // Change to 434.0 or other frequency, must match RX's freq!
@@ -22,7 +25,7 @@
   #define RFM69_RST     4
   #define LED           13
 #endif
-
+/*
 #if defined(ARDUINO_SAMD_FEATHER_M0) // Feather M0 w/Radio
   #define RFM69_CS      8
   #define RFM69_INT     3
@@ -49,21 +52,7 @@
   #define RFM69_CS      33   // "B"
   #define RFM69_INT     27   // "A"
   #define LED           13
-#endif
-
-/* Teensy 3.x w/wing
-#define RFM69_RST     9   // "A"
-#define RFM69_CS      10   // "B"
-#define RFM69_IRQ     4    // "C"
-#define RFM69_IRQN    digitalPinToInterrupt(RFM69_IRQ )
-*/
- 
-/* WICED Feather w/wing 
-#define RFM69_RST     PA4     // "A"
-#define RFM69_CS      PB4     // "B"
-#define RFM69_IRQ     PA15    // "C"
-#define RFM69_IRQN    RFM69_IRQ
-*/
+#endif*/
 
 // Singleton instance of the radio driver
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
@@ -124,13 +113,17 @@ void setup()
 }
 
 
-
+int timeout = 10000;
+int timerEvent;
+bool sendMessages = false;
+bool timerIsRunning = false;
 void loop() {
   delay(10);  // Wait 1 second between transmits, could also 'sleep' here!
   
-  char radiopacket[6] = "000000";
+  char radiopacket[6];
   
   //get LED state...
+   bool allAreOff = true;
    for(int i=0; i<6; i++){
     int buttonState = digitalRead(leds[i]);
     //Serial.println(radiopacket);
@@ -142,34 +135,37 @@ void loop() {
       else{
         //led is on
          radiopacket[i] = '1';
+         allAreOff = false;
       }
    }
 
-  //itoa(packetnum++, radiopacket+13, 10);
-  Serial.print("Sending "); Serial.println(radiopacket);
+  if(allAreOff){
+    //start timer if all LEDs are off
+    if(!timerIsRunning){
+      t.stop(timerEvent);
+      timerEvent = t.after(timeout, onTimerDone); //after 1 minute, start default animation
+      timerIsRunning = true;
+    }
+  }
+  else{
+    sendMessages = true;
+  }
   
   // Send a message!
-  rf69.send((uint8_t *)radiopacket, strlen(radiopacket));
- // rf69.waitPacketSent();
+  if(sendMessages){
+    Serial.print("Sending "); Serial.println(radiopacket);
+    rf69.send((uint8_t *)radiopacket, strlen(radiopacket));
+  }
 
-  // Now wait for a reply
- /* uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
-
-  if (rf69.waitAvailableTimeout(500))  { 
-    // Should be a reply message for us now   
-    if (rf69.recv(buf, &len)) {
-      Serial.print("Got a reply: ");
-      Serial.println((char*)buf);
-      Blink(LED, 50, 3); //blink LED 3 times, 50ms between blinks
-    } else {
-      Serial.println("Receive failed");
-    }
-  } else {
-    Serial.println("No reply, is another RFM69 listening?");
-  }*/
+  t.update();
 }
 
+void onTimerDone(){
+  sendMessages = false;
+  timerIsRunning = false;
+}
+
+/*
 void Blink(byte PIN, byte DELAY_MS, byte loops) {
   for (byte i=0; i<loops; i++)  {
     digitalWrite(PIN,HIGH);
@@ -177,4 +173,4 @@ void Blink(byte PIN, byte DELAY_MS, byte loops) {
     digitalWrite(PIN,LOW);
     delay(DELAY_MS);
   }
-}
+}*/

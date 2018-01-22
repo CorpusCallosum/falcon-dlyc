@@ -120,7 +120,7 @@ void setup()
 
 
 bool playDefaultAnimation = true; //play default animation on start...
-int defaultAnimationTime = 10000; // 1 minute
+int defaultAnimationTime = 5000; // 1 minute
 int timerEvent;
 bool timerRunning = false;
 void loop() {
@@ -266,7 +266,7 @@ void initSound(){
   
   // Wait for serial port to be opened, remove this line for 'standalone' operation
   //Need to uncomment this, to get serial communication working...
-  while (!Serial) { delay(1); }
+  //while (!Serial) { delay(1); }
   
   Serial.println("\n\nAdafruit VS1053 Feather Test");
   
