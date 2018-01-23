@@ -117,6 +117,8 @@ int timeout = 10000;
 int timerEvent;
 bool sendMessages = false;
 bool timerIsRunning = false;
+bool stateHasChanged = false;
+char prevPacket[6];
 void loop() {
   delay(10);  // Wait 1 second between transmits, could also 'sleep' here!
   
@@ -124,10 +126,10 @@ void loop() {
   
   //get LED state...
    bool allAreOff = true;
+   stateHasChanged = false;
    for(int i=0; i<6; i++){
     int buttonState = digitalRead(leds[i]);
     //Serial.println(radiopacket);
-    
       if(buttonState){
         //led is OFF
          radiopacket[i] = '0';
@@ -137,9 +139,20 @@ void loop() {
          radiopacket[i] = '1';
          allAreOff = false;
       }
+      //compare current led state to previous led state
+      //stateHasChanged = false;
+     
+      if(radiopacket[i] != prevPacket[i]){
+       /* Serial.print("new packet [");
+        Serial.print(i);
+        Serial.print("] = ");
+        Serial.println(radiopacket[i]);*/
+        stateHasChanged = true;
+      }
+      
    }
 
-  if(allAreOff){
+  /*if(allAreOff){
     //start timer if all LEDs are off
     if(!timerIsRunning){
       t.stop(timerEvent);
@@ -148,29 +161,27 @@ void loop() {
     }
   }
   else{
-    sendMessages = true;
-  }
+    //only send messages on state change
+   // if(stateHasChanged)
+      //sendMessages = true;
+  }*/
   
   // Send a message!
-  if(sendMessages){
+  if(stateHasChanged){
     Serial.print("Sending "); Serial.println(radiopacket);
     rf69.send((uint8_t *)radiopacket, strlen(radiopacket));
   }
 
-  t.update();
-}
+  //save previous led state
+  memcpy(prevPacket, radiopacket, 6);
 
+  //update timer
+ // t.update();
+}
+/*
 void onTimerDone(){
   sendMessages = false;
   timerIsRunning = false;
-}
-
-/*
-void Blink(byte PIN, byte DELAY_MS, byte loops) {
-  for (byte i=0; i<loops; i++)  {
-    digitalWrite(PIN,HIGH);
-    delay(DELAY_MS);
-    digitalWrite(PIN,LOW);
-    delay(DELAY_MS);
-  }
 }*/
+
+

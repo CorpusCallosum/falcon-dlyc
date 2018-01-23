@@ -175,11 +175,13 @@ void loop() {
   t.update();
 }
 
+int defaultLEDIndex = 0;
+int defaultLEDCounter = 1;
 void onTimerDone(){
   Serial.println("timer done - start default animation");
   playDefaultAnimation = true;
-  int defaultLEDIndex = 0;
-  int defaultLEDCounter = 1;
+  defaultLEDIndex = 0;
+  defaultLEDCounter = 1;
   timerRunning = false;
 }
 
@@ -219,8 +221,6 @@ void lightLEDGroup(int i, uint32_t c){
 }
 
 //DEFAULT ANIAMTION CODE
-int defaultLEDIndex = 0;
-int defaultLEDCounter = 1;
 void updateDefaultAnimation(){
   if(defaultLEDIndex >= NUMPIXELS){
     defaultLEDCounter = -1;
