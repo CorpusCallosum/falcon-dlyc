@@ -13,12 +13,10 @@
 #include <SD.h>
 #include <Adafruit_VS1053.h>
 #include "Timer.h"
-#include "Pattern.h"
 
 Timer t;
 
 /************ Radio Setup ***************/
-
 // Change to 434.0 or other frequency, mumst match RX's freq!
 #define RF69_FREQ 915.0
 
@@ -32,29 +30,6 @@ Timer t;
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 int16_t packetnum = 0;  // packet counter, we increment per xmission
-
-//LED stuff
-#include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
-
-// Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1
-#define ledPIN            11
-// How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS      54
-
-// When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
-// Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
-// example for more information on possible values.
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, ledPIN, NEO_GRB + NEO_KHZ800);
-
-//define colors
-uint32_t red = strip.Color(255, 0, 0);
-uint32_t orange = strip.Color(255, 100, 0);
-uint32_t green = strip.Color(0, 255, 0);
-uint32_t black = strip.Color(0, 0, 0);
 
 //SOUND stuff
 // These are the pins used
@@ -121,21 +96,13 @@ void setup()
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   rf69.setEncryptionKey(key);
   
-  pinMode(LED, OUTPUT);
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
-
-  strip.begin(); // This initializes the NeoPixel library.
-  //turn off LEDS on start
-  clearLEDs();
 
   //init sound
   initSound();
 }
 
-
-bool playDefaultAnimation = true; //play default animation on start...
-int defaultAnimationTime = 5000; // 1 minute
 int timerEvent;
 bool timerRunning = false;
 uint8_t prevBuf[6] = {'0','0','0','0','0'};;
@@ -153,108 +120,48 @@ void loop() {
       Serial.print("]: ");
       Serial.println((char*)buf);
 
-      //make sure data is not corrupt
-
-      //handle message
-      for(int i=0; i<6; i++){
-       // bool isOn = true;
-        
+       for(int i=0; i<6; i++){
         if (buf[i] == '0'){
-          lightLED(i, false);
         }
         else if (buf[i] == '1') {
-          lightLED(i, true);
         }
         else{
           Serial.println("corrupt data received");
           return;
         }
-           
-       // lightLED(i, isOn);
       }
 
       handleSounds(buf, prevBuf);
-      strip.show(); // This sends the updated pixel color to the hardware.
+      
       //copy buf to memory
       memcpy(prevBuf, buf, 6);
     } else {
       Serial.println("Receive failed");
     }
-    playDefaultAnimation = false;
+
     timerRunning = false;
     t.stop(timerEvent);
   }
   else{
     //no message
-    //Serial.println("no messages");
-    if(!playDefaultAnimation){
-     // Serial.println("default animation not running");
-      //start timer
-      if(!timerRunning){
-       // Serial.println("timer not running - start timer");
-        t.stop(timerEvent);
-        timerEvent = t.after(defaultAnimationTime, onTimerDone); //after 1 minute, start default animation
-        timerRunning = true;
-      }
-    }else{
-      updateDefaultAnimation();
-    }
+
   }
   //update timer class
   t.update();
 }
 
-int defaultLEDIndex = 0;
-int defaultLEDCounter = 1;
 void onTimerDone(){
-  Serial.println("timer done - start default animation");
-  playDefaultAnimation = true;
-  defaultLEDIndex = 0;
-  defaultLEDCounter = 1;
+  Serial.println("timer done");
   timerRunning = false;
 }
 
-void lightLED(int i, bool isOn){
-  //Serial.print(isOn);
-  //Serial.print("LED #");
-  //Serial.print(i);
-  
-  if(isOn){
-   // Serial.println(" is ON");
-    if(i<2){
-      //GREEN
-      lightLEDGroup(i, green);
-    }
-    else if(i<4){
-      //ORANGE
-      lightLEDGroup(i, orange);
-    }
-    else{
-      //RED
-      lightLEDGroup(i, red);
-    }
-  }
-  else
-  {
-    lightLEDGroup(i, black);
-  }
-    
-}
-
-void lightLEDGroup(int i, uint32_t c){
-  int startIndex = i * 9;
-  int endIndex = ((i+1) * 9) - 1;
-  for(int l=startIndex; l<= endIndex; l++){
-    strip.setPixelColor(l, c); // Moderately bright green color.
-  }
-}
 
 int searchCounter;
 void handleSounds(uint8_t buf[6], uint8_t prevBuf[6]){
   if(buf[0] == '1' && prevBuf[0] == '0'){
     //if(searchCounter < 7){
       //search plays 7 times?
-      //playFile("searchp.mp3");
+      playFile("searchp.mp3");
      // searchCounter++;
     //}
   }
@@ -282,46 +189,6 @@ void onSoundTimerDone(){
 
 bool compareBufs(uint8_t a[6], uint8_t b[6]){
   //compare two arrays...
-}
-
-//DEFAULT ANIAMTION CODE
-void updateDefaultAnimation(){
-  if(defaultLEDIndex >= NUMPIXELS){
-    defaultLEDCounter = -1;
-    //playFile("bwooprev.mp3");
-    //musicPlayer.startPlayingFile("bwooprev.mp3");
-  }else if(defaultLEDIndex<=0){
-    defaultLEDCounter = 1;
-    //playFile("bwoophi.mp3");
-    //musicPlayer.startPlayingFile("bwoophi.mp3");
-  }
-  defaultLEDIndex += defaultLEDCounter;
-  
-  lightLEDRange(0,defaultLEDIndex);
-  delay(defaultLEDIndex+10);
-}
-
-void lightLEDRange(int first, int last){
-  int cg = NUMPIXELS/3;
-  strip.clear();
-  for(int i=first;i<last; i++){
-    if(i<cg){
-      //green
-      strip.setPixelColor(i, green); // Moderately bright green color.
-    }
-    else if(i<cg*2){
-      strip.setPixelColor(i, orange);
-    }
-    else if(i<cg*3){
-      strip.setPixelColor(i, red);
-    }
-  }
-  strip.show();
-}
-
-void clearLEDs(){
-  strip.clear();
-  strip.show();
 }
 
 //*************
