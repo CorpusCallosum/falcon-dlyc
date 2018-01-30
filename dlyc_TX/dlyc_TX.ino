@@ -31,7 +31,8 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 int16_t packetnum = 0;  // packet counter, we increment per xmission
 
-int leds[6] = {5,6,9,10,11,12};
+//int leds[6] = {5,6,9,10,11,12};
+int leds[6] = {12,11,10,9,6,5};
 
 void setup() 
 {
@@ -75,13 +76,16 @@ void setup()
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
+   for(int i=0; i<6; i++){
+    pinMode(leds[i], INPUT_PULLUP);
+   }
   //data LED input
-  pinMode(5, INPUT);
-  pinMode(6, INPUT);
-  pinMode(9, INPUT);
-  pinMode(10, INPUT);
-  pinMode(11, INPUT);
-  pinMode(12, INPUT);
+  //pinMode(5, INPUT);
+  //pinMode(6, INPUT);
+ //pinMode(9, INPUT);
+  //pinMode(10, INPUT);
+  //pinMode(11, INPUT);
+  //pinMode(12, INPUT);
 }
 
 
@@ -99,8 +103,12 @@ void loop() {
   //get LED state...
    bool allAreOff = true;
    stateHasChanged = false;
+   //Serial.print("new packet:");
    for(int i=0; i<6; i++){
     int buttonState = digitalRead(leds[i]);
+    //Serial.print(i);
+    //Serial.print(":");
+    //Serial.print(radiopacket[i]);
     //Serial.println(radiopacket);
       if(buttonState){
         //led is OFF
@@ -121,8 +129,8 @@ void loop() {
         Serial.println(radiopacket[i]);*/
         stateHasChanged = true;
       }
-      
    }
+  //Serial.println("end of packet");
   
   // Send a message!
   if(stateHasChanged){
@@ -131,9 +139,7 @@ void loop() {
   }
 
   //save previous led state
- // memcpy(prevPacket, radiopacket, 6);
-
-
+  memcpy(prevPacket, radiopacket, 6);
 }
 
 

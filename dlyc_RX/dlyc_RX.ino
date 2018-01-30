@@ -333,7 +333,7 @@ void initSound(){
   
   // Wait for serial port to be opened, remove this line for 'standalone' operation
   //Need to uncomment this, to get serial communication working...
-  while (!Serial) { delay(1); }
+ // while (!Serial) { delay(1); }
   
   Serial.println("\n\nAdafruit VS1053 Feather Test");
   
