@@ -25,10 +25,24 @@
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 //photocell thresholds
-int thresh = 700;
-int threshs[6] = {900,800,800,700,700,900};
-int pins[6] = {5,4,3,2,1,0};//define analog pin order
+const int numPins = 6;
+int thresh = 100;
+int threshs[numPins] = {900,800,800,700,700,900};
+int pins[numPins] = {5,4,3,2,1,0};//define analog pin order
 
+//smoothing to establish baseline
+// Define the number of samples to keep track of. The higher the number, the
+// more the readings will be smoothed, but the slower the output will respond to
+// the input. Using a constant rather than a normal variable lets us use this
+// value to determine the size of the readings array.
+const int numReadings = 10;
+
+int readings[numPins][numReadings];      // the readings from the analog input
+int readIndex = 0;              // the index of the current reading
+int totals[numPins];                  // the running total
+int average = 0;                // the average
+
+bool VERBOSE = false;
 void setup() 
 {
   Serial.begin(115200);
@@ -71,6 +85,13 @@ void setup()
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
+  // initialize all the averaged readings to 0:
+  for (int i = 0; i < numPins; i++) {
+    totals[i] = 0;
+    for (int thisReading = 0; thisReading < numReadings; thisReading++) {
+      readings[i][thisReading] = 0;
+    }
+  }
 }
 
 bool sendMessages = false;
@@ -86,17 +107,26 @@ void loop() {
    //Serial.print("new packet:");
    for(int i=0; i<6; i++){
     int v = analogRead(pins[i]);
-    //Serial.print(i);
-    //Serial.print(":");
-    //Serial.print(v);
-    //Serial.print(",");
-      if(v < threshs[i]){
+
+    //calculate smoothed value
+    int smoothV = calcSmoothing(i,v);
+
+    if(VERBOSE){
+      Serial.print(i);
+      Serial.print(":");
+      Serial.print(smoothV);
+      Serial.print(":");
+      Serial.print(v);
+      Serial.print(",");
+    }
+    
+      if(v - smoothV > thresh){
         //led is OFF
-         radiopacket[i] = '0';
-      }
-      else{
-        //led is on
          radiopacket[i] = '1';
+      }
+      else if(smoothV - v > thresh){
+        //led is on
+         radiopacket[i] = '0';
       }
       //compare current led state to previous led state
      
@@ -109,6 +139,15 @@ void loop() {
       }
    }
 
+    // advance to the next position in the array:
+  readIndex = readIndex + 1;
+
+  // if we're at the end of the array...
+  if (readIndex >= numReadings) {
+    // ...wrap around to the beginning:
+    readIndex = 0;
+  }
+
   //Serial.println("");
   
   // Send a message!
@@ -119,6 +158,24 @@ void loop() {
 
   //save previous led state
   memcpy(prevPacket, radiopacket, 6);
+
+  Serial.flush();
+}
+
+int calcSmoothing(int index, int value){
+  // subtract the last reading:
+  totals[index] -= readings[index][readIndex];
+  // read from the sensor:
+  readings[index][readIndex] = value;
+  // add the reading to the total:
+  totals[index] += value;
+
+  // calculate the average:
+  average = totals[index] / numReadings;
+  // send it to the computer as ASCII digits
+ // Serial.println(average);
+  return(average);
+ // delay(1);        // delay in between reads for stability
 }
 
 
