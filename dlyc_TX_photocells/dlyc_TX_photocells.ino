@@ -1,18 +1,13 @@
-// rf69 demo tx rx.pde
-// -*- mode: C++ -*-
-// Example sketch showing how to create a simple messageing client
-// with the RH_RF69 class. RH_RF69 class does not provide for addressing or
-// reliability, so you should only use RH_RF69  if you do not need the higher
-// level messaging abilities.
-// It is designed to work with the other example rf69_server.
-// Demonstrates the use of AES encryption, setting the frequency and modem 
-// configuration
+// DLCY Transmit Code
+// Made by: Floating Point LLC - www.floating.pt
+// Developer: Jack Kalish
+// Date: January 2018
+//
+// Read data in from analog pins and send as byte array message radio packet.
+
 
 #include <SPI.h>
 #include <RH_RF69.h>
-
-#include "Timer.h"
-Timer t;
 
 /************ Radio Setup ***************/
 
@@ -29,10 +24,10 @@ Timer t;
 // Singleton instance of the radio driver
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
-int16_t packetnum = 0;  // packet counter, we increment per xmission
-
-//int leds[6] = {5,6,9,10,11,12};
-int leds[6] = {12,11,10,9,6,5};
+//photocell thresholds
+int thresh = 700;
+int threshs[6] = {900,800,800,700,700,900};
+int pins[6] = {5,4,3,2,1,0};//define analog pin order
 
 void setup() 
 {
@@ -76,52 +71,34 @@ void setup()
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
-   for(int i=0; i<6; i++){
-    pinMode(leds[i], INPUT_PULLUP);
-   }
-   
-  //data LED input
-  //pinMode(5, INPUT);
-  //pinMode(6, INPUT);
- //pinMode(9, INPUT);
-  //pinMode(10, INPUT);
-  //pinMode(11, INPUT);
-  //pinMode(12, INPUT);
 }
 
-
-int timeout = 10000;
-int timerEvent;
 bool sendMessages = false;
-bool timerIsRunning = false;
 bool stateHasChanged = false;
 char prevPacket[6];
 void loop() {
-  delay(10);  // Wait 1 second between transmits, could also 'sleep' here!
+  delay(10);  // Wait between transmits, could also 'sleep' here!
   
   char radiopacket[6];
   
   //get LED state...
-   bool allAreOff = true;
    stateHasChanged = false;
    //Serial.print("new packet:");
    for(int i=0; i<6; i++){
-    int buttonState = digitalRead(leds[i]);
+    int v = analogRead(pins[i]);
     //Serial.print(i);
     //Serial.print(":");
-    //Serial.print(radiopacket[i]);
-    //Serial.println(radiopacket);
-      if(buttonState){
+    //Serial.print(v);
+    //Serial.print(",");
+      if(v < threshs[i]){
         //led is OFF
          radiopacket[i] = '0';
       }
       else{
         //led is on
          radiopacket[i] = '1';
-         allAreOff = false;
       }
       //compare current led state to previous led state
-      //stateHasChanged = false;
      
       if(radiopacket[i] != prevPacket[i]){
        /* Serial.print("new packet [");
@@ -131,7 +108,8 @@ void loop() {
         stateHasChanged = true;
       }
    }
-  //Serial.println("end of packet");
+
+  //Serial.println("");
   
   // Send a message!
   if(stateHasChanged){
