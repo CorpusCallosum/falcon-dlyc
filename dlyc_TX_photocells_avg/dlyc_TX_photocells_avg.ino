@@ -26,7 +26,7 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 //photocell thresholds
 const int numPins = 6;
-int thresh = 50;
+int thresh = 100;
 int threshs[numPins] = {900,800,800,700,700,900};
 int pins[numPins] = {5,4,3,2,1,0};//define analog pin order
 
