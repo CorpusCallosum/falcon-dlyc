@@ -40,7 +40,7 @@ int16_t packetnum = 0;  // packet counter, we increment per xmission
 // On a Trinket or Gemma we suggest changing this to 1
 #define ledPIN            11
 // How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS      54
+#define NUMPIXELS      48
 
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
 // Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
@@ -128,6 +128,9 @@ void loop() {
       //make sure data is not corrupt
 
       //handle message
+
+      //start by clearing them...
+      
       for(int i=0; i<6; i++){
        // bool isOn = true;
         
@@ -185,10 +188,6 @@ void onTimerDone(){
 }
 
 void lightLED(int i, bool isOn){
-  //Serial.print(isOn);
-  //Serial.print("LED #");
-  //Serial.print(i);
-  
   if(isOn){
    // Serial.println(" is ON");
     if(i<2){
@@ -211,11 +210,13 @@ void lightLED(int i, bool isOn){
     
 }
 
+int pps = 8; //number of pixels per segment
 void lightLEDGroup(int i, uint32_t c){
-  int startIndex = i * 9;
-  int endIndex = ((i+1) * 9) - 1;
+  int startIndex = i * pps;
+  int endIndex = ((i+1) * pps) - 1;
   for(int l=startIndex; l<= endIndex; l++){
-    strip.setPixelColor(l, c); // Moderately bright green color.
+    if(l!=0)
+      strip.setPixelColor(l, c); 
   }
 }
 
@@ -234,13 +235,15 @@ void updateDefaultAnimation(){
   delay(defaultLEDIndex+10);
 }
 
+int cg = NUMPIXELS/3; //number of pixels per color
 void lightLEDRange(int first, int last){
-  int cg = NUMPIXELS/3;
   strip.clear();
+  if(first == 0)
+    first++; //SKIP FIRST LED
   for(int i=first;i<last; i++){
     if(i<cg){
       //green
-      strip.setPixelColor(i, green); // Moderately bright green color.
+      strip.setPixelColor(i, green); // Moderately bright green color.c
     }
     else if(i<cg*2){
       strip.setPixelColor(i, orange);
